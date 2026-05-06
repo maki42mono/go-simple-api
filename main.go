@@ -13,32 +13,43 @@ type Book struct {
 	Autor string `json:"autor"`
 }
 
-var (
-	books  = make(map[int]Book)
-	nextID = 1
-)
-
-func init() {
-	books[nextID] = Book{nextID, "My title 1", "Agathya"}
-	nextID++
-	books[nextID] = Book{nextID, "Dvornik", "Dvorezkii"}
-	nextID++
+type App struct {
+	Books map[int]Book
+	ID    int
 }
 
-func handleBooks(w http.ResponseWriter, r *http.Request) {
+func (app *App) incId() int {
+	defer func() {
+		app.ID++
+	}()
+
+	return app.ID
+}
+
+func NewApp() App {
+	app := App{make(map[int]Book), 1}
+	id := app.incId()
+	app.Books[id] = Book{id, "Govyanka", "Griboedov"}
+	id = app.incId()
+	app.Books[id] = Book{id, "Nazdorovka", "Kristina"}
+
+	return app
+}
+
+func (app *App) handleBooks(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		getBooks(w)
+		app.getBooks(w)
 	default:
 		message := fmt.Sprintf("The method %s is not implemented yet", r.Method)
 		http.Error(w, message, http.StatusInternalServerError)
 	}
 }
 
-func getBooks(w http.ResponseWriter) {
+func (app *App) getBooks(w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json")
 
-	err := json.NewEncoder(w).Encode(books)
+	err := json.NewEncoder(w).Encode(app.Books)
 	if err != nil {
 		fmt.Fprintf(w, "Something went wrong: %s", err.Error())
 		http.Error(w, "my custom error", http.StatusInternalServerError)
@@ -51,6 +62,8 @@ func getBooks(w http.ResponseWriter) {
 }
 
 func main() {
-	http.HandleFunc("/books", handleBooks)
+	app := NewApp()
+
+	http.HandleFunc("/books", app.handleBooks)
 	log.Fatal(http.ListenAndServe(":1234", nil))
 }
