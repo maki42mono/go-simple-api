@@ -40,6 +40,8 @@ func (app *App) handleBooks(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		app.getBooks(w)
+	case http.MethodPost:
+		app.addBook(w, r)
 	default:
 		message := fmt.Sprintf("The method %s is not implemented yet", r.Method)
 		http.Error(w, message, http.StatusInternalServerError)
@@ -58,6 +60,24 @@ func (app *App) getBooks(w http.ResponseWriter) {
 	}
 
 	w.WriteHeader(http.StatusOK)
+
+}
+
+func (app *App) addBook(w http.ResponseWriter, r *http.Request) {
+	var input Book
+	err := json.NewDecoder(r.Body).Decode(&input)
+
+	if err != nil {
+		fmt.Fprintf(w, "Something went wrong: %s", err.Error())
+		http.Error(w, "my custom error", http.StatusInternalServerError)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	input.ID = app.incId()
+	app.Books[input.ID] = input
+	url := fmt.Sprintf("/book/%d", input.ID)
+	http.Redirect(w, r, url, http.StatusCreated)
 
 }
 
